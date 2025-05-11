@@ -10,6 +10,8 @@
 #define DEFAULT_PORT 8080
 int verbose = 0;  // sorry, trying to figure out how to pass to handleConnection
 
+// TODO: Add calculator support
+//       Add modules
 void* handleConnection(void* arg) {
     int client_fd = *(int*)arg;
     free(arg);
