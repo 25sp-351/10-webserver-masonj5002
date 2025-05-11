@@ -36,6 +36,48 @@ void* handleConnection(void* arg) {
             "\r\n"
             "Hello world!";
         write(client_fd, response, strlen(response));
+    } else if (strncmp(buffer, "GET /static/images/", 19) ==
+               0) {  // Only works with a file name for 19 characters
+        char file_path[256] = "static/images/";
+        char* start         = buffer + 19;
+        char* space         = strchr(start, ' ');
+        if (space &&
+            (space - start) < (int)(sizeof(file_path) - strlen(file_path))) {
+            strncat(file_path, start, space - start);
+
+            if (verbose)
+                printf("Looking for file: %s\n", file_path);
+
+            FILE* fp = fopen(file_path, "rb");
+            if (fp) {
+                fseek(fp, 0, SEEK_END);
+                long file_size = ftell(fp);
+                fseek(fp, 0, SEEK_SET);
+
+                char header[256];
+                snprintf(header, sizeof(header),
+                         "HTTP/1.1 200 OK\r\n"
+                         "Content-Type: image/jpeg\r\n"
+                         "Content-Length: %ld\r\n"
+                         "Connection: close\r\n"
+                         "\r\n",
+                         file_size);
+
+                write(client_fd, header, strlen(header));
+
+                char img_buf[1024];
+                size_t n;
+                while ((n = fread(img_buf, 1, sizeof(img_buf), fp)) > 0)
+                    write(client_fd, img_buf, n);
+                fclose(fp);
+            } else {
+                const char* not_found =
+                    "HTTP/1.1 404 Not Found\r\n"
+                    "Content-Length: 0\r\n"
+                    "\r\n";
+                write(client_fd, not_found, strlen(not_found));
+            }
+        }
     } else {
         const char* not_found =
             "HTTP/1.1 404 Not Found\r\n"
