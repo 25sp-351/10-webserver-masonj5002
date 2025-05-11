@@ -17,11 +17,31 @@ void* handleConnection(void* arg) {
     char buffer[1024];
     ssize_t bytes_read;
 
-    while ((bytes_read = read(client_fd, buffer, sizeof(buffer) - 1)) > 0) {
-        buffer[bytes_read] = '\0';
-        if (verbose)
-            printf("%s", buffer);
-        write(client_fd, buffer, bytes_read);  // Echo back
+    bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+    if (bytes_read <= 0) {
+        close(client_fd);
+        return NULL;
+    }
+
+    buffer[bytes_read] = '\0';
+
+    if (verbose)
+        printf("%s", buffer);
+
+    if (strncmp(buffer, "GET /hello", 10) == 0) {
+        const char* response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/plain\r\n"
+            "Content-Length: 12\r\n"
+            "\r\n"
+            "Hello world!";
+        write(client_fd, response, strlen(response));
+    } else {
+        const char* not_found =
+            "HTTP/1.1 404 Not Found\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n";
+        write(client_fd, not_found, strlen(not_found));
     }
 
     close(client_fd);
