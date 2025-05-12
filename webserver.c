@@ -54,38 +54,99 @@ void handleImages(int client_fd, char* buffer) {
 }
 
 void handleMath(int client_fd, char* buffer) {
-    char* start = buffer + 14;
-    char* end   = strchr(start, ' ');
-
-    // Extract num1 and num2 from the URL path
-    if (end)
-        *end = '\0';
-
-    // Find the separator between num1 and num2
-    char* separator = strchr(start, '/');
-    if (separator) {
-        *separator = '\0';
-        separator++;
+    char* start         = buffer + 10;
+    char* operation_end = strchr(start, '/');
+    if (!operation_end) {
+        const char* not_found =
+            "HTTP/1.1 404 Not Found\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n";
+        write(client_fd, not_found, strlen(not_found));
+        close(client_fd);
+        return;
     }
 
-    int num1 = atoi(start);
-    int num2 = atoi(separator);
-    int sum  = num1 + num2;
+    *operation_end = '\0';
 
-    // Create the response with the sum
+    char* num1_str = operation_end + 1;
+    char* num2_str = strchr(num1_str, '/');
+    if (!num2_str) {
+        const char* not_found =
+            "HTTP/1.1 404 Not Found\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n";
+        write(client_fd, not_found, strlen(not_found));
+        close(client_fd);
+        return;
+    }
+
+    *num2_str = '\0';
+
+    num2_str++;
+
+    int num1   = atoi(num1_str);
+    int num2   = atoi(num2_str);
+    int result = 0;
     char response[1024];
-    int response_len = snprintf(response, sizeof(response),
+    int response_len = 0;
+
+    // Addition
+    if (strcmp(start, "add") == 0) {
+        result       = num1 + num2;
+        response_len = snprintf(response, sizeof(response),
                                 "HTTP/1.1 200 OK\r\n"
                                 "Content-Type: text/plain\r\n"
                                 "Content-Length: %d\r\n"
                                 "\r\n"
                                 "%d",
-                                sum, sum);
+                                result, result);
+
+    }
+    // Multiplication
+    else if (strcmp(start, "mul") == 0) {
+        result       = num1 * num2;
+        response_len = snprintf(response, sizeof(response),
+                                "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Content-Length: %d\r\n"
+                                "\r\n"
+                                "%d",
+                                result, result);
+    }
+    // Division
+    else if (strcmp(start, "div") == 0) {
+        if (num2 == 0) {
+            const char* error_response =
+                "HTTP/1.1 400 Bad Request\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: 15\r\n"
+                "\r\n"
+                "Division by zero!";
+            write(client_fd, error_response, strlen(error_response));
+            close(client_fd);
+            return;
+        }
+        result       = num1 / num2;
+        response_len = snprintf(response, sizeof(response),
+                                "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Content-Length: %d\r\n"
+                                "\r\n"
+                                "%d",
+                                result, result);
+    } else {
+        const char* not_found =
+            "HTTP/1.1 404 Not Found\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n";
+        write(client_fd, not_found, strlen(not_found));
+        close(client_fd);
+        return;
+    }
 
     write(client_fd, response, response_len);
 }
 
-// TODO: Add calculator support
 void* handleConnection(void* arg) {
     int client_fd = *(int*)arg;
     free(arg);
@@ -115,12 +176,11 @@ void* handleConnection(void* arg) {
         write(client_fd, response, strlen(response));
     }
 
-    // IMAGES
     else if (strncmp(buffer, "GET /static/images/", 19) == 0) {
         handleImages(client_fd, buffer);
     }
 
-    else if (strncmp(buffer, "GET /calc/add/", 14) == 0) {
+    else if (strncmp(buffer, "GET /calc/", 10) == 0) {
         handleMath(client_fd, buffer);
     }
 
