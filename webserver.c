@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #define DEFAULT_PORT 8080
-int verbose = 0;  // sorry, trying to figure out how to pass to handleConnection
+int verbose = 0;
 
 void handleImages(int client_fd, char* buffer) {
     char file_path[256] = "static/images/";
