@@ -53,6 +53,38 @@ void handleImages(int client_fd, char* buffer) {
     }
 }
 
+void handleMath(int client_fd, char* buffer) {
+    char* start = buffer + 14;
+    char* end   = strchr(start, ' ');
+
+    // Extract num1 and num2 from the URL path
+    if (end)
+        *end = '\0';
+
+    // Find the separator between num1 and num2
+    char* separator = strchr(start, '/');
+    if (separator) {
+        *separator = '\0';
+        separator++;
+    }
+
+    int num1 = atoi(start);
+    int num2 = atoi(separator);
+    int sum  = num1 + num2;
+
+    // Create the response with the sum
+    char response[1024];
+    int response_len = snprintf(response, sizeof(response),
+                                "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Content-Length: %d\r\n"
+                                "\r\n"
+                                "%d",
+                                sum, sum);
+
+    write(client_fd, response, response_len);
+}
+
 // TODO: Add calculator support
 void* handleConnection(void* arg) {
     int client_fd = *(int*)arg;
@@ -86,6 +118,10 @@ void* handleConnection(void* arg) {
     // IMAGES
     else if (strncmp(buffer, "GET /static/images/", 19) == 0) {
         handleImages(client_fd, buffer);
+    }
+
+    else if (strncmp(buffer, "GET /calc/add/", 14) == 0) {
+        handleMath(client_fd, buffer);
     }
 
     else {
