@@ -30,6 +30,7 @@ void* handleConnection(void* arg) {
     if (verbose)
         printf("%s", buffer);
 
+    // HELLO WORLD
     if (strncmp(buffer, "GET /hello", 10) == 0) {
         const char* response =
             "HTTP/1.1 200 OK\r\n"
@@ -38,8 +39,10 @@ void* handleConnection(void* arg) {
             "\r\n"
             "Hello world!";
         write(client_fd, response, strlen(response));
+
+    // Images
     } else if (strncmp(buffer, "GET /static/images/", 19) ==
-               0) {  // Only works with a file name for 19 characters
+               0) {
         char file_path[256] = "static/images/";
         char* start         = buffer + 19;
         char* space         = strchr(start, ' ');
@@ -80,6 +83,7 @@ void* handleConnection(void* arg) {
                 write(client_fd, not_found, strlen(not_found));
             }
         }
+    // ERROR
     } else {
         const char* not_found =
             "HTTP/1.1 404 Not Found\r\n"
